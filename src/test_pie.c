@@ -1,6 +1,11 @@
 #include "tests.h"
 
+
 #include <stdint.h>
+
+#undef ABC_ENABLED
+#define ABC_ENABLED 0
+#include "../abc.h"
 
 static abc_clock_t clock_sqrt;
 static abc_clock_t clock_sqr;
@@ -41,7 +46,6 @@ uint64_t quadratic_sqr(uint64_t n)
     abc_clock_stop(clock_sqr);
     return sum;
 }
-
 
 void test_pie(void)
 {
