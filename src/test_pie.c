@@ -42,6 +42,7 @@ uint64_t quadratic_sqr(uint64_t n)
     return sum;
 }
 
+
 void test_pie(void)
 {
     // register static clocks
@@ -51,10 +52,6 @@ void test_pie(void)
     // prepare test
     const uint64_t m = 3000;
     uint64_t n;
-    dyn_array_abc_clock clocks;
-    dyn_array_abc_clock_alloc(&clocks, 8);
-    dyn_array_abc_clock_append(&clocks, clock_sqrt);
-    dyn_array_abc_clock_append(&clocks, clock_sqr);
 
     // test 1
     ABC_LOG("using linear_sqr");
@@ -67,7 +64,7 @@ void test_pie(void)
         n += 1;
     }
     ABC_LOGVAR("%llu", n);
-    abc_pie_chart(&clocks);
+    abc_pie_chart(clock_sqrt, clock_sqr);
 
     // reset clocks
     abc_clock_reset(clock_sqrt);
@@ -84,8 +81,6 @@ void test_pie(void)
         n += 1;
     }
     ABC_LOGVAR("%llu", n);
-    abc_pie_chart(&clocks);
-    
-    dyn_array_abc_clock_free(&clocks);
+    abc_pie_chart(clock_sqrt, clock_sqr);
 }
 

@@ -50,7 +50,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdarg.h>
 
 #define ABC_MSG_PREFIX        "[abc] "
 #define ABC_MSG_ERROR_AT      "ERROR (at %s): "
@@ -71,8 +71,7 @@ typedef struct
     abc_second_t total, start;
 } ABClock;
 
-DEFINE_DYN_ARRAY(ABClock,     dyn_array_abclock)
-DEFINE_DYN_ARRAY(abc_clock_t, dyn_array_abc_clock)
+DEFINE_DYN_ARRAY(ABClock, dyn_array_abclock)
 
 /*
 #ifdef _WIN32
@@ -188,26 +187,25 @@ static inline void abc_clock_log_round(abc_clock_t id)
     }
 }
 
-static inline void abc_pie_chart(const dyn_array_abc_clock* clocks)
+#define abc_pie_chart(...) \
+    abc__pie_chart(sizeof((abc_clock_t[]){__VA_ARGS__})/sizeof(abc_clock_t), __VA_ARGS__)
+
+static inline void abc__pie_chart(int count, ...)
 {
-    if (!clocks)
-    {
-        printf(ABC_MSG_PREFIX ABC_MSG_ERROR_AT "Bad pie!\n", __func__);
-        return;
-    }
+    va_list args, copy;
+    va_start(args, count);
+    va_copy(copy, args);
     double sum_totals = 0;
-    for (size_t i=0; i<clocks->size; ++i)
+    for (int i=0; i<count; ++i)
     {
-        const ABClock* clock = abc_clock_get(clocks->data[i]);
+        const ABClock* clock = abc_clock_get(va_arg(args,abc_clock_t));
         if (clock)
             sum_totals += clock->total;
     }
-    printf(ABC_MSG_PREFIX "Pie chart 0x%" PRIxPTR " (sum=" ABC_MSG_CLOCK_FMT "):\n",
-        (uintptr_t)clocks,
-        sum_totals);
-    for (size_t i=0; i<clocks->size; ++i)
+    printf(ABC_MSG_PREFIX "Pie chart (sum=" ABC_MSG_CLOCK_FMT "):\n", sum_totals);
+    for (int i=0; i<count; ++i)
     {
-        const ABClock* clock = abc_clock_get(clocks->data[i]);
+        const ABClock* clock = abc_clock_get(va_arg(copy,abc_clock_t));
         if (clock)
             printf(ABC_MSG_PREFIX "  %s: %.2f%% (" ABC_MSG_CLOCK_FMT ")\n",
                 clock->name,
