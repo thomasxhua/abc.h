@@ -14,6 +14,7 @@ int main(int argc, char** argv)
         "-g", "-O0",
         "-std=c99", "-Wall", "-Wextra", "-pedantic", "-static",
         SRC_FOLDER "test_fibonacci.c",
+        SRC_FOLDER "test_pie.c",
         SRC_FOLDER "main.c",
         "-o",
         BUILD_FOLDER "main");

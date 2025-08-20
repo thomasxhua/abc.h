@@ -4,6 +4,7 @@
 #include "../abc.h"
 
 void test_fibonacci(void);
+void test_pie(void);
 
 #endif // TESTS_H
 

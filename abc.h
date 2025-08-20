@@ -50,13 +50,16 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <inttypes.h>
 
-#define ABC_LOG(msg)           printf("[abc] " msg "\n")
-#define ABC_LOGCLK(name, time) printf("[abc] @%s: %.3fs.\n", name, time)
-#define ABC_LOGVAR(fmt, name)  printf("[abc] %s: " fmt "\n", #name, name)
-#define ABC_LOGERR(msg)        printf("[abc] ERROR (at %s): " msg "\n", __func__)
-
+#define ABC_MSG_PREFIX        "[abc] "
+#define ABC_MSG_ERROR_AT      "ERROR (at %s): "
+#define ABC_MSG_CLOCK_FMT     "%.3fs"
 #define ABC_MSG_INVALID_CLOCK "Invalid clock!"
+
+#define ABC_LOG(msg)           printf(ABC_MSG_PREFIX msg "\n")
+#define ABC_LOGCLK(name, time) printf(ABC_MSG_PREFIX "@%s@: " ABC_MSG_CLOCK_FMT ".\n", name, time)
+#define ABC_LOGVAR(fmt, name)  printf(ABC_MSG_PREFIX "%s: " fmt "\n", #name, name)
 
 typedef uint64_t abc_clock_t;
 typedef double abc_second_t;
@@ -68,7 +71,8 @@ typedef struct
     abc_second_t total, start;
 } ABClock;
 
-DEFINE_DYN_ARRAY(ABClock, dyn_array_abclock)
+DEFINE_DYN_ARRAY(ABClock,     dyn_array_abclock)
+DEFINE_DYN_ARRAY(abc_clock_t, dyn_array_abc_clock)
 
 /*
 #ifdef _WIN32
@@ -118,11 +122,24 @@ static inline void abc_clock_central_free(void)
         dyn_array_abclock_free(clock_central);
 }
 
+static inline ABClock* abc_clock_get(abc_clock_t id)
+{
+    const dyn_array_abclock* clock_central = abc_clock_central();
+    if (id >= clock_central->size)
+    {
+        printf(ABC_MSG_PREFIX ABC_MSG_ERROR_AT "No clock with id %llu.\n", __func__, id);
+        return NULL;
+    }
+    return &clock_central->data[id];
+}
+
 static inline abc_clock_t abc_clock_register(const char* name)
 {
+    
     dyn_array_abclock* clock_central = abc_clock_central();
     const abc_clock_t id             = clock_central->size;
-    dyn_array_abclock_append(clock_central, (ABClock){
+    dyn_array_abclock_append(clock_central, (ABClock)
+    {
         .id    = id,
         .name  = name,
         .total = 0,
@@ -133,54 +150,70 @@ static inline abc_clock_t abc_clock_register(const char* name)
 
 static inline void abc_clock_start(abc_clock_t id)
 {
-    dyn_array_abclock* clock_central = abc_clock_central();
-    if (id >= clock_central->size)
-    {
-        ABC_LOGERR(ABC_MSG_INVALID_CLOCK);
-        return;
-    }
-    clock_central->data[id].start = abc_now();
+    ABClock* clock = abc_clock_get(id);
+    if (clock)
+        clock->start = abc_now();
 }
 
 static inline abc_second_t abc_clock_stop(abc_clock_t id)
 {
-    dyn_array_abclock* clock_central = abc_clock_central();
-    if (id >= clock_central->size)
+    ABClock* clock = abc_clock_get(id);
+    if (clock)
     {
-        ABC_LOGERR(ABC_MSG_INVALID_CLOCK);
-        return 0;
+        const abc_second_t delta_t = abc_now() - clock->start;
+        clock->start = 0;
+        clock->total += delta_t;
+        return delta_t;
     }
-    ABClock* clock             = &clock_central->data[id];
-    const abc_second_t delta_t = abc_now() - clock->start;
-    clock->start = 0;
-    clock->total += delta_t;
-    return delta_t;
+    return 0;
 }
 
 static inline void abc_clock_reset(abc_clock_t id)
 {
-    dyn_array_abclock* clock_central = abc_clock_central();
-    if (id >= clock_central->size)
+    ABClock* clock = abc_clock_get(id);
+    if (clock)
     {
-        ABC_LOGERR(ABC_MSG_INVALID_CLOCK);
-        return;
+        clock->start = 0;
+        clock->total = 0;
     }
-    ABClock* clock = &clock_central->data[id];
-    clock->start = 0;
-    clock->total = 0;
 }
 
-static inline void abc_clock_log(abc_clock_t id)
+static inline void abc_clock_log_round(abc_clock_t id)
 {
-    dyn_array_abclock* clock_central = abc_clock_central();
-    if (id >= clock_central->size)
+    const ABClock* clock = abc_clock_get(id);
+    if (clock)
     {
-        ABC_LOGERR(ABC_MSG_INVALID_CLOCK);
+        const abc_second_t delta_t = abc_now() - clock->start;
+        ABC_LOGCLK(clock->name, delta_t);
+    }
+}
+
+static inline void abc_pie_chart(const dyn_array_abc_clock* clocks)
+{
+    if (!clocks)
+    {
+        printf(ABC_MSG_PREFIX ABC_MSG_ERROR_AT "Bad pie!\n", __func__);
         return;
     }
-    const ABClock* clock       = &clock_central->data[id];
-    const abc_second_t delta_t = abc_now() - clock->start;
-    ABC_LOGCLK(clock->name, delta_t);
+    double sum_totals = 0;
+    for (size_t i=0; i<clocks->size; ++i)
+    {
+        const ABClock* clock = abc_clock_get(clocks->data[i]);
+        if (clock)
+            sum_totals += clock->total;
+    }
+    printf(ABC_MSG_PREFIX "Pie chart 0x%" PRIxPTR " (sum=" ABC_MSG_CLOCK_FMT "):\n",
+        (uintptr_t)clocks,
+        sum_totals);
+    for (size_t i=0; i<clocks->size; ++i)
+    {
+        const ABClock* clock = abc_clock_get(clocks->data[i]);
+        if (clock)
+            printf(ABC_MSG_PREFIX "  %s: %.2f%% (" ABC_MSG_CLOCK_FMT ")\n",
+                clock->name,
+                100.0f * clock->total / sum_totals,
+                clock->total);
+    }
 }
 
 #endif // ABC_H
