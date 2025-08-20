@@ -1,4 +1,5 @@
-# template
+# abc.h
+A basic clock to adeptly benchmark C.
 
 ## build
 ```console
