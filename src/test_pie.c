@@ -49,7 +49,7 @@ void test_pie(void)
     clock_sqr  = abc_clock_register("clock_sqr");
 
     // prepare test
-    const uint64_t m = 2000;
+    const uint64_t m = 3000;
     uint64_t n;
     dyn_array_abc_clock clocks;
     dyn_array_abc_clock_alloc(&clocks, 8);
@@ -65,7 +65,6 @@ void test_pie(void)
             ? linear_sqr(n)
             : linear_sqrt(n);
         n += 1;
-        //printf("%llu%s", n, (i+1<m) ? ", " : "\n");
     }
     ABC_LOGVAR("%llu", n);
     abc_pie_chart(&clocks);
@@ -83,9 +82,10 @@ void test_pie(void)
             ? quadratic_sqr(n)
             : linear_sqrt(n);
         n += 1;
-        //printf("%llu%s", n, (i+1<m) ? ", " : "\n");
     }
     ABC_LOGVAR("%llu", n);
     abc_pie_chart(&clocks);
+    
+    dyn_array_abc_clock_free(&clocks);
 }
 
