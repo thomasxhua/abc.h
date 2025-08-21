@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#define ABC_IMPLEMENTATION
 #include "../abc.h"
 #include "tests.h"
 
